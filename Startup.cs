@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SecureProgramming3.Services;
 
 namespace SecureProgramming3
 {
@@ -28,6 +29,8 @@ namespace SecureProgramming3
             {
                 configuration.RootPath = "ClientApp/build";
             });
+
+            services.AddSingleton<IParallelReaderService, ParallelReaderService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -56,7 +59,7 @@ namespace SecureProgramming3
                     name: "default",
                     pattern: "{controller}/{action=Index}/{id?}");
             });
-
+            
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "ClientApp";
