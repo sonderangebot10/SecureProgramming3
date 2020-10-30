@@ -34,7 +34,7 @@ namespace SecureProgramming3
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IParallelReaderService reader)
         {
             if (env.IsDevelopment())
             {
@@ -69,6 +69,8 @@ namespace SecureProgramming3
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });
+
+            reader.Initiate();
         }
     }
 }
