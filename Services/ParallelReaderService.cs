@@ -21,7 +21,15 @@ namespace SecureProgramming3.Services
 
         const string FilePaths = @"C:\_repositories\SecureProgramming3\rand_files\";
         const int DelayTime = 10;
-        
+
+        private int _totalFilesDone = 0;
+        private int _maxPrime = 0;
+        private int _minPrime = Int32.MaxValue;
+
+        private static object _totalFilesDoneSynchronizationObject = new Object();
+        private static object _maxSynchronizationObject = new Object();
+        private static object _minSynchronizationObject = new Object();
+
         public ParallelReaderService(ILogger<ParallelReaderService> logger)
         {
             _threads = new Dictionary<CancellationTokenSource, ConsumerProducer>();
@@ -84,6 +92,9 @@ namespace SecureProgramming3.Services
                             if (isPrime)
                             {
                                 _logger.LogInformation(file.FileName + " : " + number.ToString() + " : " + count);
+
+                                if (_minPrime > number) ChangeMin(number);
+                                if (_maxPrime < number) ChangeMax(number);
                             }
 
                             //Otherwise all the files are checked too fast
@@ -91,6 +102,7 @@ namespace SecureProgramming3.Services
                             count--;
                         }
                     }
+                    IncrementTotalFilesDone();
                 }
             }, token);
 
@@ -113,6 +125,33 @@ namespace SecureProgramming3.Services
             }
 
             return await Task.FromResult(_threads.Count);
+        }
+
+        private void IncrementTotalFilesDone()
+        {
+            lock (_totalFilesDoneSynchronizationObject)
+            {
+                _totalFilesDone++;
+                _logger.LogInformation("Total files done: " + _totalFilesDone);
+            }
+        }
+
+        private void ChangeMax(int value)
+        {
+            lock (_maxSynchronizationObject)
+            {
+                _maxPrime = value;
+                _logger.LogInformation("New MAX: " + value);
+            }
+        }
+
+        private void ChangeMin(int value)
+        {
+            lock (_minSynchronizationObject)
+            {
+                _minPrime = value;
+                _logger.LogInformation("New MIN: " + value);
+            }
         }
     }
 }
