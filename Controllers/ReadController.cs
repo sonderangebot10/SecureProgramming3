@@ -37,12 +37,6 @@ namespace SecureProgramming3.Controllers
         {
             _logger.LogInformation("Remove thread operation.");
 
-            if (!_reader.IsInitated)
-            {
-                _logger.LogInformation("Reader is not initiated.");
-                return BadRequest(0);
-            }
-
             var threads = await _reader.RemoveThread();
 
             return Ok(threads);

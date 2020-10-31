@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -14,67 +15,87 @@ namespace SecureProgramming3.Services
     public class ParallelReaderService : IParallelReaderService
     {
         private readonly Channel<ChannelData> _channel;
-        private readonly ConcurrentQueue<StreamReader> _documents;
+        private readonly ConcurrentQueue<StreamData> _documents;
         private readonly ILogger<IParallelReaderService> _logger;
-        private readonly List<ConsumerProducer> _threads;
+        private readonly Dictionary<CancellationTokenSource, ConsumerProducer> _threads;
+
+        const string FilePaths = @"C:\_repositories\SecureProgramming3\rand_files\";
+        const int DelayTime = 10;
         
         public ParallelReaderService(ILogger<ParallelReaderService> logger)
         {
-            _threads = new List<ConsumerProducer>();
-            _documents = new ConcurrentQueue<StreamReader>();
+            _threads = new Dictionary<CancellationTokenSource, ConsumerProducer>();
+            _documents = new ConcurrentQueue<StreamData>();
             _channel = Channel.CreateBounded<ChannelData>(Int32.MaxValue);
             _logger = logger;
         }
 
         public void Initiate()
         {
-            string[] filePaths = Directory.GetFiles(@"C:\_repositories\SecureProgramming3\rand_files\");
+            string[] filePaths = Directory.GetFiles(FilePaths);
             foreach(var filePath in filePaths)
             {
                 var file = new System.IO.StreamReader(filePath);
-                _documents.Enqueue(file);
-            }
-        }
+                var fileName = filePath.Substring(FilePaths.Length);
 
-        public bool IsInitated
-        {
-            get
-            {
-                return _threads.Count > 0;
+                _documents.Enqueue(new StreamData { Stream = file, FileName = fileName});
             }
         }
 
         public async Task<int> AddThread()
         {
-            Task producer = Task.Factory.StartNew(() => {
-                if(_documents.TryDequeue(out var file))
+            CancellationTokenSource source = new CancellationTokenSource();
+            CancellationToken token = source.Token;
+
+            Task producer = Task.Run(async () => {
+                while (!token.IsCancellationRequested)
                 {
-                    string line;
-                    while ((line = file.ReadLine()) != null)
+                    if (_documents.TryDequeue(out var file))
                     {
-                        var channelData = new ChannelData() { number = Int32.Parse(line) };
-                        _channel.Writer.TryWrite(channelData);
+                        var numbers = new List<int>();
+
+                        string line;
+                        while ((line = file.Stream.ReadLine()) != null)
+                        {
+                            numbers.Add(Int32.Parse(line));
+
+                            //Otherwise all the files are checked too fast
+                            await Task.Delay(DelayTime);
+                        }
+
+                        _channel.Writer.TryWrite(new ChannelData() { FileName = file.FileName, FileData = numbers });
+                    }
+                    else
+                    {
+                        _channel.Writer.TryComplete();
                     }
                 }
-                _channel.Writer.Complete();
-            });
+            }, token);
 
-            Task Consumer = Task.Factory.StartNew(async () => {
-                while (await _channel.Reader.WaitToReadAsync())
+            Task consumer = Task.Run(async () => {
+                while (await _channel.Reader.WaitToReadAsync() && !token.IsCancellationRequested)
                 {
-                    if (_channel.Reader.TryRead(out var channelData))
+                    if (_channel.Reader.TryRead(out var file))
                     {
-                        var isPrime = PrimeHelper.IsPrime(channelData.number);
-                        if (isPrime)
+                        var count = file.FileData.Count;
+                        foreach(var number in file.FileData)
                         {
-                            _logger.LogInformation(channelData.number.ToString());
+                            var isPrime = PrimeHelper.IsPrime(number);
+                            if (isPrime)
+                            {
+                                _logger.LogInformation(file.FileName + " : " + number.ToString() + " : " + count);
+                            }
+
+                            //Otherwise all the files are checked too fast
+                            await Task.Delay(DelayTime);
+                            count--;
                         }
                     }
                 }
-            });
+            }, token);
 
-            var thread = new ConsumerProducer { Producer = producer, Consumer = Consumer };
-            _threads.Add(thread);
+            var consumerProducer = new ConsumerProducer { Producer = producer, Consumer = consumer };
+            _threads.Add(source, consumerProducer);
 
             return await Task.FromResult(_threads.Count);
         }
@@ -85,8 +106,10 @@ namespace SecureProgramming3.Services
             {
                 var thread = _threads.Last();
 
-                Task.WaitAll(thread.Consumer, thread.Producer);
-                _threads.Remove(thread);
+                thread.Key.Cancel();
+                Task.WaitAll(thread.Value.Producer, thread.Value.Consumer);
+
+                _threads.Remove(thread.Key);
             }
 
             return await Task.FromResult(_threads.Count);

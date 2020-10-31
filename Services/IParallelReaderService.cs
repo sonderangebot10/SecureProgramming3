@@ -7,7 +7,6 @@ namespace SecureProgramming3.Services
 {
     public interface IParallelReaderService
     {
-        bool IsInitated { get; }
         void Initiate();
         Task<int> AddThread();
         Task<int> RemoveThread();
