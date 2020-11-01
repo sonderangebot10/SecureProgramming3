@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SecureProgramming3.Hubs;
 using SecureProgramming3.Services;
 
 namespace SecureProgramming3
@@ -21,13 +22,23 @@ namespace SecureProgramming3
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddSignalR();
             services.AddControllersWithViews();
 
             // In production, the React files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/build";
+            });
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy("ClientPermission", policy =>
+                {
+                    policy.AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowAnyOrigin();
+                });
             });
 
             services.AddSingleton<IParallelReaderService, ParallelReaderService>();
@@ -47,6 +58,7 @@ namespace SecureProgramming3
                 app.UseHsts();
             }
 
+            app.UseCors("ClientPermission");
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
@@ -58,6 +70,8 @@ namespace SecureProgramming3
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller}/{action=Index}/{id?}");
+
+                endpoints.MapHub<PrimeHub>("/primeHub");
             });
             
             app.UseSpa(spa =>

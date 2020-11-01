@@ -27,7 +27,7 @@ namespace SecureProgramming3.Controllers
         {
             _logger.LogInformation("Add thread operation.");
 
-            var threads = await _reader.AddThread();
+            var threads = await _reader.AddThreadAsync();
 
             return Ok(threads);
         }
@@ -37,7 +37,17 @@ namespace SecureProgramming3.Controllers
         {
             _logger.LogInformation("Remove thread operation.");
 
-            var threads = await _reader.RemoveThread();
+            var threads = await _reader.RemoveThreadAsync();
+
+            return Ok(threads);
+        }
+
+        [HttpGet("getThreads")]
+        public async Task<ActionResult<int>> GetThreadsAsync()
+        {
+            _logger.LogInformation("Get threads operation.");
+
+            var threads = await _reader.GetThreadsAsync();
 
             return Ok(threads);
         }

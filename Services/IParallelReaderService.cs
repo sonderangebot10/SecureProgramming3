@@ -8,7 +8,8 @@ namespace SecureProgramming3.Services
     public interface IParallelReaderService
     {
         void Initiate();
-        Task<int> AddThread();
-        Task<int> RemoveThread();
+        Task<int> AddThreadAsync();
+        Task<int> RemoveThreadAsync();
+        Task<int> GetThreadsAsync();
     }
 }

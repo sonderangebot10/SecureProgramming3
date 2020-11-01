@@ -1,9 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using SecureProgramming3.Helpers;
+using SecureProgramming3.Hubs;
 using SecureProgramming3.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -18,6 +21,7 @@ namespace SecureProgramming3.Services
         private readonly ConcurrentQueue<StreamData> _documents;
         private readonly ILogger<IParallelReaderService> _logger;
         private readonly Dictionary<CancellationTokenSource, ConsumerProducer> _threads;
+        private readonly IHubContext<PrimeHub> _primeHubContext;
 
         const string FilePaths = @"C:\_repositories\SecureProgramming3\rand_files\";
         const int DelayTime = 10;
@@ -30,12 +34,15 @@ namespace SecureProgramming3.Services
         private static object _maxSynchronizationObject = new Object();
         private static object _minSynchronizationObject = new Object();
 
-        public ParallelReaderService(ILogger<ParallelReaderService> logger)
+
+        public ParallelReaderService(ILogger<ParallelReaderService> logger, IHubContext<PrimeHub> primeHubContext)
         {
             _threads = new Dictionary<CancellationTokenSource, ConsumerProducer>();
             _documents = new ConcurrentQueue<StreamData>();
             _channel = Channel.CreateBounded<ChannelData>(Int32.MaxValue);
+
             _logger = logger;
+            _primeHubContext = primeHubContext;
         }
 
         public void Initiate()
@@ -50,7 +57,7 @@ namespace SecureProgramming3.Services
             }
         }
 
-        public async Task<int> AddThread()
+        public async Task<int> AddThreadAsync()
         {
             CancellationTokenSource source = new CancellationTokenSource();
             CancellationToken token = source.Token;
@@ -100,6 +107,8 @@ namespace SecureProgramming3.Services
                             //Otherwise all the files are checked too fast
                             await Task.Delay(DelayTime);
                             count--;
+
+                            ChangeFileCompleted(file.FileName, file.FileData.Count, count);
                         }
                     }
                     IncrementTotalFilesDone();
@@ -112,7 +121,7 @@ namespace SecureProgramming3.Services
             return await Task.FromResult(_threads.Count);
         }
 
-        public async Task<int> RemoveThread()
+        public async Task<int> RemoveThreadAsync()
         {
             if(_threads.Count > 0)
             {
@@ -127,12 +136,18 @@ namespace SecureProgramming3.Services
             return await Task.FromResult(_threads.Count);
         }
 
+        public async Task<int> GetThreadsAsync()
+        {
+            return await Task.FromResult(_threads.Count);
+        }
+
         private void IncrementTotalFilesDone()
         {
             lock (_totalFilesDoneSynchronizationObject)
             {
                 _totalFilesDone++;
                 _logger.LogInformation("Total files done: " + _totalFilesDone);
+                _primeHubContext.Clients.All.SendAsync("ChangeTotalFilesDone", _totalFilesDone.ToString()).ConfigureAwait(false);
             }
         }
 
@@ -142,6 +157,7 @@ namespace SecureProgramming3.Services
             {
                 _maxPrime = value;
                 _logger.LogInformation("New MAX: " + value);
+                _primeHubContext.Clients.All.SendAsync("ChangeMax", value.ToString()).ConfigureAwait(false);
             }
         }
 
@@ -151,6 +167,15 @@ namespace SecureProgramming3.Services
             {
                 _minPrime = value;
                 _logger.LogInformation("New MIN: " + value);
+                _primeHubContext.Clients.All.SendAsync("ChangeMin", value.ToString()).ConfigureAwait(false);
+            }
+        }
+
+        private void ChangeFileCompleted(string fileName, int total, int current)
+        {
+            lock (_minSynchronizationObject)
+            {
+                _primeHubContext.Clients.All.SendAsync("ChangeFile", fileName, total.ToString(), current.ToString()).ConfigureAwait(false);
             }
         }
     }
