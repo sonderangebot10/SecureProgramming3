@@ -2,14 +2,14 @@
 
 .Net + React implementation of the Secure Programming course task 3.
 
-![alt text](https://ibb.co/pR4NZY3)
+![alt text](https://i.ibb.co/LJ9B6VC/Screenshot-2020-11-01-190135.png)
 
 ## Table of Contents
 
 - [Prerequisites](#remarks)
 - [Installation](#installation)
 - [Results](#Results)
-- [The task](#The task)
+- [Task](#Thetask)
 
 ### Prerequisites
 
