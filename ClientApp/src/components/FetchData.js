@@ -73,8 +73,6 @@ export class FetchData extends Component {
                 <ul>
                     {files.map(values => {
                         let [key, total, current] = values;
-                        console.log(parseInt((total - current) / total * 100))
-                        console.log(parseInt((total - current) / total * 100).toString());
                         return <li key={key}>{key} <Line percent={parseInt((total - current) / total * 100).toString()} strokeWidth="4" strokeColor="#D3D3D3" /></li>
                     })}
                 </ul>

@@ -24,7 +24,7 @@ namespace SecureProgramming3.Services
         private readonly IHubContext<PrimeHub> _primeHubContext;
 
         const string FilePaths = @"C:\_repositories\SecureProgramming3\rand_files\";
-        const int DelayTime = 10;
+        const int DelayTime = 3;
 
         private int _totalFilesDone = 0;
         private int _maxPrime = 0;
@@ -73,9 +73,6 @@ namespace SecureProgramming3.Services
                         while ((line = file.Stream.ReadLine()) != null)
                         {
                             numbers.Add(Int32.Parse(line));
-
-                            //Otherwise all the files are checked too fast
-                            await Task.Delay(DelayTime);
                         }
 
                         _channel.Writer.TryWrite(new ChannelData() { FileName = file.FileName, FileData = numbers });
@@ -88,7 +85,7 @@ namespace SecureProgramming3.Services
             }, token);
 
             Task consumer = Task.Run(async () => {
-                while (await _channel.Reader.WaitToReadAsync() && !token.IsCancellationRequested)
+                while (!token.IsCancellationRequested && await _channel.Reader.WaitToReadAsync())
                 {
                     if (_channel.Reader.TryRead(out var file))
                     {
@@ -156,7 +153,7 @@ namespace SecureProgramming3.Services
             lock (_maxSynchronizationObject)
             {
                 _maxPrime = value;
-                _logger.LogInformation("New MAX: " + value);
+                _logger.LogInformation("New maximum value: " + value);
                 _primeHubContext.Clients.All.SendAsync("ChangeMax", value.ToString()).ConfigureAwait(false);
             }
         }
@@ -166,7 +163,7 @@ namespace SecureProgramming3.Services
             lock (_minSynchronizationObject)
             {
                 _minPrime = value;
-                _logger.LogInformation("New MIN: " + value);
+                _logger.LogInformation("New minimum value: " + value);
                 _primeHubContext.Clients.All.SendAsync("ChangeMin", value.ToString()).ConfigureAwait(false);
             }
         }
