@@ -48,7 +48,7 @@ namespace SecureProgramming3.Services
 
         public void Initiate()
         {
-            var fullFilePaths = FilePaths + @"\\rand_files\";
+            var fullFilePaths = Path.Combine("rand_files");
             string[] filePaths = Directory.GetFiles(fullFilePaths);
             foreach(var filePath in filePaths)
             {
