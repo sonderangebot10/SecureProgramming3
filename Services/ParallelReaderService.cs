@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -23,7 +24,6 @@ namespace SecureProgramming3.Services
         private readonly Dictionary<CancellationTokenSource, ConsumerProducer> _threads;
         private readonly IHubContext<PrimeHub> _primeHubContext;
 
-        const string FilePaths = @"C:\_repositories\SecureProgramming3\rand_files\";
         const int DelayTime = 3;
 
         private int _totalFilesDone = 0;
@@ -34,6 +34,7 @@ namespace SecureProgramming3.Services
         private static object _maxSynchronizationObject = new Object();
         private static object _minSynchronizationObject = new Object();
 
+        private string FilePaths = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         public ParallelReaderService(ILogger<ParallelReaderService> logger, IHubContext<PrimeHub> primeHubContext)
         {
@@ -47,11 +48,12 @@ namespace SecureProgramming3.Services
 
         public void Initiate()
         {
-            string[] filePaths = Directory.GetFiles(FilePaths);
+            var fullFilePaths = FilePaths + @"\\rand_files\";
+            string[] filePaths = Directory.GetFiles(fullFilePaths);
             foreach(var filePath in filePaths)
             {
                 var file = new System.IO.StreamReader(filePath);
-                var fileName = filePath.Substring(FilePaths.Length);
+                var fileName = filePath.Substring(fullFilePaths.Length);
 
                 _documents.Enqueue(new StreamData { Stream = file, FileName = fileName});
             }
