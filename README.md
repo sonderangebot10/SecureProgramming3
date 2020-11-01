@@ -9,6 +9,7 @@
 - [Prerequisites](#remarks)
 - [Installation](#installation)
 - [Results](#Results)
+- [Implementation](#Implementation)
 - [Task](#Thetask)
 
 ### Prerequisites
@@ -36,6 +37,15 @@ Scanning through all the given documents following results were obtained:
 Max prime: 199895387
 Min prime: 3
 Total files done: 1000
+
+## Implementation
+
+The task was done using a Rest API to control the backend and SignalR to transmit the live data to the frontend. Producer-Consumer pattern was used as the multithreaded workflow pattern.
+
+![alt text](https://i.ibb.co/hC0hs1Z/Untitled-Diagram-22.png)
+
+I decided to use both concurrent queue as well as a channel to try different implementation in one solution.
+*Channels are basically a neweer and better version of concurrent queues.
 
 ## The task
 
